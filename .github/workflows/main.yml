@@ -14,11 +14,11 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v4
 
-      - name: Setup Java JDK
+      - name: Setup Java JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
-          java-version: '17'
+          java-version: '21'
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
@@ -34,22 +34,17 @@ jobs:
             npm init -y
           fi
 
-          npm install @capacitor/core @capacitor/cli @capacitor/android
+          npm install @capacitor/core@latest @capacitor/cli@latest @capacitor/android@latest
 
-          # dist folder banao
           mkdir -p dist
-
-          # Pura project dist me copy karne ki koshish
           cp -r *.html *.js *.css assets images static dist/ 2>/dev/null || true
-          
-          # Pure repo me index.html dhoondo
+
           INDEX_PATH=$(find . -name "index.html" -not -path "*/node_modules/*" -not -path "*/dist/*" | head -n 1)
           if [ -n "$INDEX_PATH" ]; then
             INDEX_DIR=$(dirname "$INDEX_PATH")
             cp -r "$INDEX_DIR"/* dist/ 2>/dev/null || true
           fi
 
-          # Agar fir bhi index.html nahi mila, toh khud bana do
           if [ ! -f dist/index.html ]; then
             echo '<!DOCTYPE html><html><head><title>Jalwa App</title></head><body><h1>Jalwa App</h1></body></html>' > dist/index.html
           fi
@@ -57,12 +52,13 @@ jobs:
       - name: Setup Capacitor & Build APK
         run: |
           npx cap init Jalwa com.jalwa.app --web-dir dist || true
-          if [ ! -d "android" ]; then npx cap add android; fi
+          rm -rf android
+          npx cap add android
           npx cap sync android
           
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew assembleDebug --no-daemon
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
