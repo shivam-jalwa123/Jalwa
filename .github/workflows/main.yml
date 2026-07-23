@@ -28,25 +28,33 @@ jobs:
         with:
           node-version: 18
 
-      - name: Auto-Detect & Prepare Project
+      - name: Prepare Files & index.html
         run: |
-          # Agar package.json nahi hai toh dummy package.json create karein
           if [ ! -f package.json ]; then
-            echo "Creating missing package.json..."
             npm init -y
           fi
 
-          # Essential Capacitor tools install karein
           npm install @capacitor/core @capacitor/cli @capacitor/android
 
-          # Agar build/dist folder nahi hai toh root files ko dist me copy karein
-          if [ -f package.json ] && grep -q '"build":' package.json; then
+          if grep -q '"build":' package.json 2>/dev/null; then
             npm run build || true
           fi
 
           mkdir -p dist
+
+          # Direct files copy
           cp -r *.html *.js *.css assets images static dist/ 2>/dev/null || true
-          if [ -d "build" ]; then cp -r build/* dist/; fi
+          if [ -d "build" ]; then cp -r build/* dist/ 2>/dev/null || true; fi
+          if [ -d "public" ]; then cp -r public/* dist/ 2>/dev/null || true; fi
+
+          # Search for index.html if missing in dist
+          if [ ! -f dist/index.html ]; then
+            INDEX_PATH=$(find . -name "index.html" -not -path "*/node_modules/*" -not -path "*/dist/*" | head -n 1)
+            if [ -n "$INDEX_PATH" ]; then
+              INDEX_DIR=$(dirname "$INDEX_PATH")
+              cp -r "$INDEX_DIR"/* dist/ 2>/dev/null || true
+            fi
+          fi
 
       - name: Setup Capacitor & Build APK
         run: |
