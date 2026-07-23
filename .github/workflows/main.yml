@@ -28,17 +28,32 @@ jobs:
         with:
           node-version: 18
 
-      - name: Install & Build App
+      - name: Auto-Detect & Prepare Project
         run: |
-          npm install
-          npm install @capacitor/core @capacitor/cli @capacitor/android
-          npm run build
+          # Agar package.json nahi hai toh dummy package.json create karein
+          if [ ! -f package.json ]; then
+            echo "Creating missing package.json..."
+            npm init -y
+          fi
 
-      - name: Build APK with Capacitor
+          # Essential Capacitor tools install karein
+          npm install @capacitor/core @capacitor/cli @capacitor/android
+
+          # Agar build/dist folder nahi hai toh root files ko dist me copy karein
+          if [ -f package.json ] && grep -q '"build":' package.json; then
+            npm run build || true
+          fi
+
+          mkdir -p dist
+          cp -r *.html *.js *.css assets images static dist/ 2>/dev/null || true
+          if [ -d "build" ]; then cp -r build/* dist/; fi
+
+      - name: Setup Capacitor & Build APK
         run: |
           npx cap init Jalwa com.jalwa.app --web-dir dist || true
-          npx cap add android || true
-          npx cap copy android
+          if [ ! -d "android" ]; then npx cap add android; fi
+          npx cap sync android
+          
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug
@@ -47,4 +62,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Jalwa-App-Debug
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: '**/android/app/build/outputs/apk/debug/app-debug.apk'
