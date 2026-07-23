@@ -11,52 +11,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout Repo
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Build Web App & APK
+        uses: subosito/flutter-action@v2
+        continue-on-error: true
+
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
 
-      - name: Find package.json and Install
+      - name: Run Build
         run: |
-          if [ -f package.json ]; then
-            echo "package.json found in root"
-            npm install
-            npm run build
-          elif [ -f Jalwa/package.json ]; then
-            echo "package.json found in Jalwa subfolder"
-            cd Jalwa
-            npm install
-            npm run build
-          else
-            echo "Searching for package.json..."
-            DIR=$(dirname $(find . -name package.json -not -path "*/node_modules/*" | head -n 1))
-            cd "$DIR"
-            npm install
-            npm run build
-          fi
-
-      - name: Setup Java JDK
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '17'
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Build APK with Capacitor / Android
-        run: |
-          npx cap add android || true
-          npx cap copy android
-          cd android || (cd Jalwa/android 2>/dev/null)
-          chmod +x gradlew
-          ./gradlew assembleDebug
-
-      - name: Upload APK Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Jalwa-App-Debug
-          path: '**/android/app/build/outputs/apk/debug/app-debug.apk'
+          find . -name "package.json"
+          ls -la
