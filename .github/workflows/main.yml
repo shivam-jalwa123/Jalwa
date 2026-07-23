@@ -14,16 +14,41 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v4
 
-      - name: Build Web App & APK
-        uses: subosito/flutter-action@v2
-        continue-on-error: true
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
 
-      - name: Setup Node
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 18
 
-      - name: Run Build
+      - name: Install & Build App
         run: |
-          find . -name "package.json"
-          ls -la
+          if [ -f package.json ]; then
+            npm install
+            npm run build
+          elif [ -f Jalwa/package.json ]; then
+            cd Jalwa
+            npm install
+            npm run build
+          fi
+
+      - name: Build APK with Capacitor
+        run: |
+          npx cap add android || true
+          npx cap copy android
+          cd android || cd Jalwa/android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Jalwa-App-Debug
+          path: '**/android/app/build/outputs/apk/debug/app-debug.apk'
